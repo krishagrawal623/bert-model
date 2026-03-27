@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Mac
+.DS_Store
+
+# Node (if any frontend)
+node_modules/
+
+# Optional: logs/temp files
+*.log
+*.tmp
