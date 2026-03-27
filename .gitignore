@@ -10,6 +10,9 @@ __pycache__/
 # Node (if any frontend)
 node_modules/
 
+# Ignore demo scripts containing secrets
+backend/demo.py
+
 # Optional: logs/temp files
 *.log
 *.tmp
