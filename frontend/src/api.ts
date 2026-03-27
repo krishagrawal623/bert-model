@@ -4,8 +4,8 @@ export interface SentimentResponse {
   error?: string;
 }
 
-// Base URL (local backend)
-const BASE_URL = "http://127.0.0.1:8000";
+// Base URL (deployed backend on Render)
+const BASE_URL = "https://bert-model.onrender.com";
 
 export async function analyzeText(text: string): Promise<SentimentResponse> {
   try {
@@ -36,4 +36,3 @@ export async function analyzeText(text: string): Promise<SentimentResponse> {
     };
   }
 }
-
