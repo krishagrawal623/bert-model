@@ -13,7 +13,7 @@ if not HF_TOKEN:
     )
 
 # Correct HF Inference API URL for community models
-API_URL = "https://api-inference.huggingface.co/models/Krish623/sentiment-model"
+API_URL = "https://router.huggingface.co/hf-inference/models/Krish623/sentiment-model"
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}",
