@@ -5,7 +5,7 @@ import requests
 # Use the Hugging Face Inference API instead of loading the model locally
 # This avoids the ~1GB+ memory footprint of transformers + torch
 MODEL_ID = "Krish623/sentiment-model"
-HF_API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
+HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
 print(f"✅ Using HF Inference API for model: {MODEL_ID}")
