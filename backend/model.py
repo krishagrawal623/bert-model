@@ -1,35 +1,55 @@
 import os
 import traceback
-from transformers import AutoModelForSequenceClassification, DistilBertTokenizerFast, pipeline
+import requests
 
-# Download and cache model at startup
+# Use the Hugging Face Inference API instead of loading the model locally
+# This avoids the ~1GB+ memory footprint of transformers + torch
 MODEL_ID = "Krish623/sentiment-model"
+HF_API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
-print(f"🔄 Loading model: {MODEL_ID}...")
-# Load tokenizer explicitly (the uploaded tokenizer_config.json has
-# an invalid tokenizer_class "TokenizersBackend" — workaround by
-# specifying DistilBertTokenizerFast directly)
-tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_ID)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID)
-classifier = pipeline("text-classification", model=model, tokenizer=tokenizer, top_k=None)
-print("✅ Model loaded successfully!")
+print(f"✅ Using HF Inference API for model: {MODEL_ID}")
+if HF_TOKEN:
+    print("🔑 HF_TOKEN is set")
+else:
+    print("⚠️ HF_TOKEN not set — requests may be rate-limited")
 
 
 def predict_sentiment(text: str, threshold: float = 0.70):
     """
-    Run sentiment prediction locally using the downloaded model.
+    Run sentiment prediction via the Hugging Face Inference API.
     """
     try:
         print(f"🔍 Input text: {text}")
 
-        results = classifier(text)
+        headers = {}
+        if HF_TOKEN:
+            headers["Authorization"] = f"Bearer {HF_TOKEN}"
 
+        response = requests.post(
+            HF_API_URL,
+            headers=headers,
+            json={"inputs": text},
+            timeout=60,
+        )
+
+        print(f"📡 HF API status: {response.status_code}")
+
+        # If model is loading (cold start), HF returns 503
+        if response.status_code == 503:
+            return {"error": "Model is loading, please try again in ~30 seconds."}
+
+        if response.status_code != 200:
+            print(f"❌ HF API error: {response.text}")
+            return {"error": f"HF API error ({response.status_code}): {response.text[:200]}"}
+
+        results = response.json()
         print("🧠 Raw response:", results)
 
         if not results:
-            return {"error": "Empty response"}
+            return {"error": "Empty response from model"}
 
-        # pipeline with top_k=None returns [[{label, score}, ...]]
+        # HF Inference API returns [[{label, score}, ...]]
         scores = results[0] if isinstance(results[0], list) else results
 
         best = max(scores, key=lambda x: x.get("score", 0))
@@ -44,6 +64,8 @@ def predict_sentiment(text: str, threshold: float = 0.70):
             "confidence": round(score, 2)
         }
 
+    except requests.exceptions.Timeout:
+        return {"error": "Model took too long to respond. Try again."}
     except Exception as e:
         print("❌ FULL ERROR ↓↓↓")
         traceback.print_exc()
