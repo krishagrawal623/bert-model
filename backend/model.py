@@ -1,88 +1,50 @@
 import os
-import time
-import requests
 import traceback
+from transformers import AutoModelForSequenceClassification, DistilBertTokenizerFast, pipeline
 
-# Token must be set via environment variable (Render dashboard → Environment)
-HF_TOKEN = os.getenv("HF_TOKEN")
+# Download and cache model at startup
+MODEL_ID = "Krish623/sentiment-model"
 
-if not HF_TOKEN:
-    raise RuntimeError(
-        "HF_TOKEN environment variable is not set. "
-        "Add it in your Render dashboard under Settings → Environment."
-    )
-
-# Correct HF Inference API URL for community models
-API_URL = "https://router.huggingface.co/hf-inference/models/Krish623/sentiment-model"
-
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}",
-    "Content-Type": "application/json"
-}
+print(f"🔄 Loading model: {MODEL_ID}...")
+# Load tokenizer explicitly (the uploaded tokenizer_config.json has
+# an invalid tokenizer_class "TokenizersBackend" — workaround by
+# specifying DistilBertTokenizerFast directly)
+tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_ID)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID)
+classifier = pipeline("text-classification", model=model, tokenizer=tokenizer, top_k=None)
+print("✅ Model loaded successfully!")
 
 
 def predict_sentiment(text: str, threshold: float = 0.70):
     """
-    Call the Hugging Face Inference API for sentiment prediction.
-    Includes retry logic to handle model cold-starts (loading from disk).
+    Run sentiment prediction locally using the downloaded model.
     """
-    max_retries = 3
+    try:
+        print(f"🔍 Input text: {text}")
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            print(f"🔍 Input text: {text}  (attempt {attempt}/{max_retries})")
+        results = classifier(text)
 
-            response = requests.post(
-                API_URL,
-                headers=headers,
-                json={"inputs": text},
-                timeout=60  # HF free tier can take 20-30s on cold start
-            )
+        print("🧠 Raw response:", results)
 
-            print("📡 Status:", response.status_code)
-            print("🧠 Raw response:", response.text)
+        if not results:
+            return {"error": "Empty response"}
 
-            # Handle model loading (cold start) — HF returns 503
-            if response.status_code == 503:
-                body = response.json()
-                wait_time = body.get("estimated_time", 20)
-                print(f"⏳ Model is loading, retrying in {wait_time:.0f}s...")
-                time.sleep(min(wait_time, 30))
-                continue
+        # pipeline with top_k=None returns [[{label, score}, ...]]
+        scores = results[0] if isinstance(results[0], list) else results
 
-            if response.status_code != 200:
-                return {
-                    "error": "API request failed",
-                    "status_code": response.status_code,
-                    "details": response.text
-                }
+        best = max(scores, key=lambda x: x.get("score", 0))
 
-            result = response.json()
+        label = best.get("label", "Unknown")
+        score = best.get("score", 0.0)
 
-            if not result:
-                return {"error": "Empty response"}
+        sentiment = label if score >= threshold else "Neutral"
 
-            if isinstance(result[0], list):
-                result = result[0]
+        return {
+            "sentiment": sentiment,
+            "confidence": round(score, 2)
+        }
 
-            best = max(result, key=lambda x: x.get("score", 0))
-
-            label = best.get("label", "Unknown")
-            score = best.get("score", 0.0)
-
-            sentiment = label if score >= threshold else "Neutral"
-
-            return {
-                "sentiment": sentiment,
-                "confidence": round(score, 2)
-            }
-
-        except Exception as e:
-            print("❌ FULL ERROR ↓↓↓")
-            traceback.print_exc()
-            if attempt == max_retries:
-                return {"error": str(e) or "Unknown error"}
-            print(f"🔄 Retrying in 5s...")
-            time.sleep(5)
-
-    return {"error": "Max retries exceeded"}
+    except Exception as e:
+        print("❌ FULL ERROR ↓↓↓")
+        traceback.print_exc()
+        return {"error": str(e) or "Unknown error"}
