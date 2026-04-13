@@ -2,60 +2,42 @@ import os
 import traceback
 import requests
 
-# Use the Hugging Face Inference API instead of loading the model locally
-# This avoids the ~1GB+ memory footprint of transformers + torch
-MODEL_ID = "Krish623/sentiment-model"
-HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+# Call your custom model hosted on HF Spaces (free, 16GB RAM)
+SPACE_URL = "https://krish623-sentiment-api.hf.space/api/predict"
 
-print(f"✅ Using HF Inference API for model: {MODEL_ID}")
-if HF_TOKEN:
-    print("🔑 HF_TOKEN is set")
-else:
-    print("⚠️ HF_TOKEN not set — requests may be rate-limited")
+print("✅ Using HF Space for model: Krish623/sentiment-model")
 
 
 def predict_sentiment(text: str, threshold: float = 0.70):
     """
-    Run sentiment prediction via the Hugging Face Inference API.
+    Run sentiment prediction via the HF Space Gradio API.
     """
     try:
         print(f"🔍 Input text: {text}")
 
-        headers = {}
-        if HF_TOKEN:
-            headers["Authorization"] = f"Bearer {HF_TOKEN}"
-
         response = requests.post(
-            HF_API_URL,
-            headers=headers,
-            json={"inputs": text},
-            timeout=60,
+            SPACE_URL,
+            json={"data": [text]},
+            timeout=120,
         )
 
-        print(f"📡 HF API status: {response.status_code}")
-
-        # If model is loading (cold start), HF returns 503
-        if response.status_code == 503:
-            return {"error": "Model is loading, please try again in ~30 seconds."}
+        print(f"📡 Space API status: {response.status_code}")
 
         if response.status_code != 200:
-            print(f"❌ HF API error: {response.text}")
-            return {"error": f"HF API error ({response.status_code}): {response.text[:200]}"}
+            print(f"❌ Space error: {response.text}")
+            return {"error": f"Space error ({response.status_code}): {response.text[:200]}"}
 
-        results = response.json()
-        print("🧠 Raw response:", results)
+        result = response.json()
+        print("🧠 Raw response:", result)
 
-        if not results:
+        # Gradio returns {"data": [{"label": "...", "score": ...}]}
+        data = result.get("data", [None])[0]
+
+        if data is None:
             return {"error": "Empty response from model"}
 
-        # HF Inference API returns [[{label, score}, ...]]
-        scores = results[0] if isinstance(results[0], list) else results
-
-        best = max(scores, key=lambda x: x.get("score", 0))
-
-        label = best.get("label", "Unknown")
-        score = best.get("score", 0.0)
+        label = data.get("label", "Unknown")
+        score = data.get("score", 0.0)
 
         sentiment = label if score >= threshold else "Neutral"
 
