@@ -3,7 +3,7 @@ import traceback
 import requests
 
 # Call your custom model hosted on HF Spaces (free, 16GB RAM)
-SPACE_URL = "https://krish623-sentiment-api.hf.space/api/predict"
+SPACE_URL = "https://krish623-sentiment-api.hf.space/run/predict"
 
 print("✅ Using HF Space for model: Krish623/sentiment-model")
 
