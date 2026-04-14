@@ -113,9 +113,9 @@ const App: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
         {/* Hero */}
         <section className="space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-            Live sentiment from your ML model
+            Live Sentiment Analysis • BERT Powered
           </div>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
             Paste any{" "}
@@ -125,8 +125,7 @@ const App: React.FC = () => {
             and see the mood.
           </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl">
-            This UI sends your text directly to the FastAPI `/predict` endpoint
-            and displays the sentiment predicted by your ML model.
+            Drop your text. We’ll read the vibe instantly with AI.
           </p>
         </section>
 
@@ -201,9 +200,11 @@ const App: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-500">
-              This reflects your backend prediction (positive / negative /
-              neutral). You can extend this further with explanations or emotion
-              detection.
+              We analyzed your text and detected its sentiment:{" "}
+              <span className="font-medium text-slate-700 dark:text-slate-200">
+                Positive, Negative, or Neutral
+              </span>
+              .
             </p>
           </div>
         </section>
